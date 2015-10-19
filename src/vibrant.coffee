@@ -92,8 +92,15 @@ class Vibrant
 
     # Clean up
     image.removeCanvas()
+
   generateColorFamily: ->
-    console.log "testing color family calc"
+    @DarkVibrantSwatch.getColorFamily() if @DarkVibrantSwatch
+    @VibrantSwatch.getColorFamily() if @VibrantSwatch
+    @LightVibrantSwatch.getColorFamily() if @LightVibrantSwatch
+    @MutedSwatch.getColorFamily() if @MutedSwatch
+    @LightMutedSwatch.getColorFamily() if @LightMutedSwatch
+    @DarkMutedSwatch.getColorFamily() if @DarkMutedSwatch
+
   generateVarationColors: ->
     @VibrantSwatch = @findColorVariation(@opts.targetNormalLuma, @opts.minNormalLuma, @opts.maxNormalLuma,
       @opts.targetVibrantSaturation, @opts.minVibrantSaturation, 1);
