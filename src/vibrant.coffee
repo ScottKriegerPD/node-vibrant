@@ -87,10 +87,13 @@ class Vibrant
 
     @generateVarationColors()
     @generateEmptySwatches()
+    
+    @generateColorFamily()
 
     # Clean up
     image.removeCanvas()
-
+  generateColorFamily: ->
+    console.log "testing color family calc"
   generateVarationColors: ->
     @VibrantSwatch = @findColorVariation(@opts.targetNormalLuma, @opts.minNormalLuma, @opts.maxNormalLuma,
       @opts.targetVibrantSaturation, @opts.minVibrantSaturation, 1);
