@@ -28,7 +28,8 @@ class Swatch
     @rgb
 
   getColorFamily: ->
-    @colorFamily = util.getColorFamily @rgb[0], @rgb[1], @rgb[2]
+    # @colorFamily = util.getColorFamily @rgb[0], @rgb[1], @rgb[2]
+    @colorFamily = util.getColorFamilyHue @hsl[0]
     
   getHex: ->
     "#" + ((1 << 24) + (@rgb[0] << 16) + (@rgb[1] << 8) + @rgb[2]).toString(16).slice(1, 7);

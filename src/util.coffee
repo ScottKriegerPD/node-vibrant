@@ -64,7 +64,36 @@ module.exports =
       g * 255
       b * 255
     ]
+  getColorFamilyHue: (hue)->
+    base_hues = [
+      ["#FF0000",0],
+      ["#FF7F00",30],
+      ["#FFFF00",60],
+      ["#7FFF00",90],
+      ["#00FF00",120],
+      ["#00FF7F",150],
+      ["#00FFFF",180],
+      ["#007FFF",210],
+      ["#0000FF",240],
+      ["#7F00FF",270],
+      ["#FF00FF",300],
+      ["#FF007F",330]
+    ]
+    differenceArray = []
 
+    #Function to find the smallest value in an array
+    Array.min = (array) ->
+      Math.min.apply Math, array
+
+    #Convert the HEX color in the array to RGB colors, split them up to R-G-B, then find out the difference between the "color" and the colors in the array
+    differenceArray.push Math.sqrt( (hue - base_hue) * (hue - base_hue) ) for [name,base_hue] in base_hues
+      
+    #Get the lowest number from the differenceArray
+    lowest = Array.min(differenceArray)
+    #Get the index for that lowest number
+    index = differenceArray.indexOf(lowest)
+    #Return the RGB name code
+    base_hue[index][0]
   getColorFamily: (color_r,color_g,color_b) ->
     # TODO: consider storing this centrally so is globally modifiable
     base_colors = [
@@ -80,7 +109,7 @@ module.exports =
       [128, 0, 128,"Purple"]
     ]
     
-    #Create an emtyp array for the difference betwwen the colors
+    #Create an empty array for the difference betwwen the colors
     differenceArray = []
 
     #Function to find the smallest value in an array
