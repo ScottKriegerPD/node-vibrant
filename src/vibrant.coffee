@@ -11,45 +11,32 @@
 ###
 Swatch = require('./swatch')
 util = require('./util')
+DefaultGenerator = require('./generator').Default
+Filter = require('./filter')
 
 module.exports =
 class Vibrant
+  @DefaultOpts:
+    colorCount: 64
+    quality: 5
+    generator: new DefaultGenerator()
+    Image: null
+    Quantizer: require('./quantizer').MMCQ
+    filters: []
+
+  @from: (src) ->
+    new Builder(src)
+
   quantize: require('quantize')
 
   _swatches: []
 
-  DefaultOpts =
-    colorCount: 64
-    quality: 5
-    targetDarkLuma: 0.26
-    maxDarkLuma: 0.45
-    minLightLuma: 0.55
-    targetLightLuma: 0.74
-    minNormalLuma: 0.3
-    targetNormalLuma: 0.5
-    maxNormalLuma: 0.7
-    targetMutesSaturation: 0.3
-    maxMutesSaturation: 0.4
-    targetVibrantSaturation: 1.0
-    minVibrantSaturation: 0.35
-    weightSaturation: 3
-    weightLuma: 6
-    weightPopulation: 1
-
-  VibrantSwatch: undefined
-  MutedSwatch: undefined
-  DarkVibrantSwatch: undefined
-  DarkMutedSwatch: undefined
-  LightVibrantSwatch: undefined
-  LightMutedSwatch: undefined
-
-  HighestPopulation: 0
-
   constructor: (@sourceImage, opts = {}) ->
-    @opts = util.defaults(opts, DefaultOpts)
+    @opts = util.defaults(opts, @constructor.DefaultOpts)
+    @generator = @opts.generator
 
-  getSwatches: (cb) ->
-    image = new @constructor.Image @sourceImage, (err, image) =>
+  getPalette: (cb) ->
+    image = new @opts.Image @sourceImage, (err, image) =>
       if err? then return cb(err)
       try
         @_process image, @opts
@@ -57,142 +44,89 @@ class Vibrant
       catch error
         return cb(error)
 
+  getSwatches: (cb) ->
+    @getPalette cb
 
   _process: (image, opts) ->
+    image.scaleDown(@opts)
     imageData = image.getImageData()
-    pixels = imageData.data
-    pixelCount = image.getPixelCount()
 
-    allPixels = []
-    i = 0
+    quantizer = new @opts.Quantizer()
+    quantizer.initialize(imageData.data, @opts)
 
-    while i < pixelCount
-      offset = i * 4
-      r = pixels[offset + 0]
-      g = pixels[offset + 1]
-      b = pixels[offset + 2]
-      a = pixels[offset + 3]
-      # If pixel is mostly opaque and not white
-      if a >= 125
-        if not (r > 250 and g > 250 and b > 250)
-          allPixels.push [r, g, b]
-      i = i + @opts.quality
+    swatches = quantizer.getQuantizedColors()
 
-
-    cmap = @quantize allPixels, @opts.colorCount
-    @_swatches = cmap.vboxes.map (vbox) =>
-      new Swatch vbox.color, vbox.vbox.count()
-
-    @maxPopulation = @findMaxPopulation
-
-    @generateVarationColors()
-    @generateEmptySwatches()
-    
-    @generateColorFamily()
-
+    @generator.generate(swatches)
     # Clean up
     image.removeCanvas()
 
-  generateColorFamily: ->
-    @DarkVibrantSwatch.getColorFamily() if @DarkVibrantSwatch
-    @VibrantSwatch.getColorFamily() if @VibrantSwatch
-    @LightVibrantSwatch.getColorFamily() if @LightVibrantSwatch
-    @MutedSwatch.getColorFamily() if @MutedSwatch
-    @LightMutedSwatch.getColorFamily() if @LightMutedSwatch
-    @DarkMutedSwatch.getColorFamily() if @DarkMutedSwatch
-
-  generateVarationColors: ->
-    @VibrantSwatch = @findColorVariation(@opts.targetNormalLuma, @opts.minNormalLuma, @opts.maxNormalLuma,
-      @opts.targetVibrantSaturation, @opts.minVibrantSaturation, 1);
-
-    @LightVibrantSwatch = @findColorVariation(@opts.targetLightLuma, @opts.minLightLuma, 1,
-      @opts.targetVibrantSaturation, @opts.minVibrantSaturation, 1);
-
-    @DarkVibrantSwatch = @findColorVariation(@opts.targetDarkLuma, 0, @opts.maxDarkLuma,
-      @opts.targetVibrantSaturation, @opts.minVibrantSaturation, 1);
-
-    @MutedSwatch = @findColorVariation(@opts.targetNormalLuma, @opts.minNormalLuma, @opts.maxNormalLuma,
-      @opts.targetMutesSaturation, 0, @opts.maxMutesSaturation);
-
-    @LightMutedSwatch = @findColorVariation(@opts.targetLightLuma, @opts.minLightLuma, 1,
-      @opts.targetMutesSaturation, 0, @opts.maxMutesSaturation);
-
-    @DarkMutedSwatch = @findColorVariation(@opts.targetDarkLuma, 0, @opts.maxDarkLuma,
-      @opts.targetMutesSaturation, 0, @opts.maxMutesSaturation);
-
-  generateEmptySwatches: ->
-    if @VibrantSwatch is undefined
-      # If we do not have a vibrant color...
-      if @DarkVibrantSwatch isnt undefined
-        # ...but we do have a dark vibrant, generate the value by modifying the luma
-        hsl = @DarkVibrantSwatch.getHsl()
-        hsl[2] = @opts.targetNormalLuma
-        @VibrantSwatch = new Swatch util.hslToRgb(hsl[0], hsl[1], hsl[2]), 0
-
-    if @DarkVibrantSwatch is undefined
-      # If we do not have a vibrant color...
-      if @VibrantSwatch isnt undefined
-        # ...but we do have a dark vibrant, generate the value by modifying the luma
-        hsl = @VibrantSwatch.getHsl()
-        hsl[2] = @opts.targetDarkLuma
-        @DarkVibrantSwatch = new Swatch util.hslToRgb(hsl[0], hsl[1], hsl[2]), 0
-
-  findMaxPopulation: ->
-    population = 0
-    population = Math.max(population, swatch.getPopulation()) for swatch in @_swatches
-    population
-
-  findColorVariation: (targetLuma, minLuma, maxLuma, targetSaturation, minSaturation, maxSaturation) ->
-    max = undefined
-    maxValue = 0
-
-    for swatch in @_swatches
-      sat = swatch.getHsl()[1];
-      luma = swatch.getHsl()[2]
-
-      if sat >= minSaturation and sat <= maxSaturation and
-        luma >= minLuma and luma <= maxLuma and
-        not @isAlreadySelected(swatch)
-          value = @createComparisonValue sat, targetSaturation, luma, targetLuma,
-            swatch.getPopulation(), @HighestPopulation
-          if max is undefined or value > maxValue
-            max = swatch
-            maxValue = value
-
-    max
-
-  createComparisonValue: (saturation, targetSaturation,
-      luma, targetLuma, population, maxPopulation) ->
-    @weightedMean(
-      @invertDiff(saturation, targetSaturation), @opts.weightSaturation,
-      @invertDiff(luma, targetLuma), @opts.weightLuma,
-      population / maxPopulation, @opts.weightPopulation
-    )
-
-  invertDiff: (value, targetValue) ->
-    1 - Math.abs value - targetValue
-
-  weightedMean: (values...) ->
-    sum = 0
-    sumWeight = 0
-    i = 0
-    while i < values.length
-      value = values[i]
-      weight = values[i + 1]
-      sum += value * weight
-      sumWeight += weight
-      i += 2
-    sum / sumWeight
-
   swatches: =>
-      Vibrant: @VibrantSwatch
-      Muted: @MutedSwatch
-      DarkVibrant: @DarkVibrantSwatch
-      DarkMuted: @DarkMutedSwatch
-      LightVibrant: @LightVibrantSwatch
-      LightMuted: @LightMuted
+    Vibrant:      @generator.getVibrantSwatch()
+    Muted:        @generator.getMutedSwatch()
+    DarkVibrant:  @generator.getDarkVibrantSwatch()
+    DarkMuted:    @generator.getDarkMutedSwatch()
+    LightVibrant: @generator.getLightVibrantSwatch()
+    LightMuted:   @generator.getLightMutedSwatch()
 
-  isAlreadySelected: (swatch) ->
-    @VibrantSwatch is swatch or @DarkVibrantSwatch is swatch or
-      @LightVibrantSwatch is swatch or @MutedSwatch is swatch or
-      @DarkMutedSwatch is swatch or @LightMutedSwatch is swatch
+module.exports.Builder =
+class Builder
+  constructor: (@src, @opts = {}) ->
+    @opts.filters = util.clone Vibrant.DefaultOpts.filters
+
+  maxColorCount: (n) ->
+    @opts.colorCount = n
+    @
+
+  maxDimension: (d) ->
+    @opts.maxDimension = d
+    @
+
+  addFilter: (f) ->
+    if typeof f == 'function'
+      @opts.filters.push f
+    @
+
+  removeFilter: (f) ->
+    if (i = @opts.filters.indexOf(f)) > 0
+      @opts.filters.splice(i)
+    @
+
+  clearFilters: ->
+    @opts.filters = []
+    @
+
+  quality: (q) ->
+    @opts.quality = q
+    @
+
+  useImage: (image) ->
+    @opts.Image = image
+    @
+
+  useGenerator: (generator) ->
+    @opts.generator = generator
+    @
+
+  useQuantizer: (quantizer) ->
+    @opts.Quantizer = quantizer
+    @
+
+  build: ->
+    if not @v?
+      @v = new Vibrant(@src, @opts)
+    @v
+
+  getSwatches: (cb) ->
+    @build().getPalette cb
+
+  getPalette: (cb) ->
+    @build().getPalette cb
+
+  from: (src) ->
+    new Vibrant(src, @opts)
+
+module.exports.Util = util
+module.exports.Swatch = Swatch
+module.exports.Quantizer = require('./quantizer/')
+module.exports.Generator = require('./generator/')
+module.exports.Filter = require('./filter/')

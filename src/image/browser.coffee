@@ -1,4 +1,4 @@
-Image = require('./image')
+Image = require('./index')
 module.exports =
 class BrowserImage extends Image
   constructor: (path, cb) ->
@@ -25,6 +25,18 @@ class BrowserImage extends Image
 
   clear: ->
     @context.clearRect 0, 0, @width, @height
+
+  getWidth: ->
+    @width
+
+  getHeight: ->
+    @height
+
+  resize: (w, h, r) ->
+    @width = @canvas.width = w
+    @height = @canvas.height = h
+    @context.scale(r, r)
+    @context.drawImage @img, 0, 0
 
   update: (imageData) ->
     @context.putImageData imageData, 0, 0

@@ -10,7 +10,7 @@ class Swatch
   hsl: undefined
   rgb: undefined
   population: 1
-  @yiq: 0
+  yiq: 0
 
   constructor: (rgb, population) ->
     @rgb = rgb
@@ -27,12 +27,8 @@ class Swatch
   getRgb: ->
     @rgb
 
-  getColorFamily: ->
-    # @colorFamily = util.getColorFamily @rgb[0], @rgb[1], @rgb[2]
-    @colorFamily = util.getColorFamilyHue @hsl[0]
-    
   getHex: ->
-    "#" + ((1 << 24) + (@rgb[0] << 16) + (@rgb[1] << 8) + @rgb[2]).toString(16).slice(1, 7);
+    util.rgbToHex(@rgb[0], @rgb[1], @rgb[2])
 
   getTitleTextColor: ->
     @_ensureTextColors()
@@ -44,3 +40,17 @@ class Swatch
 
   _ensureTextColors: ->
     if not @yiq then @yiq = (@rgb[0] * 299 + @rgb[1] * 587 + @rgb[2] * 114) / 1000
+
+  getColorFamily: ->
+    
+    @getHsl()
+    # @colorFamily = util.getColorFamily @rgb[0], @rgb[1], @rgb[2]
+    @InterfaceColorFamily = util.getColorFamily(@rgb[0], @rgb[1], @rgb[2])
+    @GoogleColorFamily = util.getColorFamilyDeltas(@rgb[0], @rgb[1], @rgb[2])
+    @HueColorFamily = util.getColorFamilyHue( @hsl[0] )
+
+    # TODO: extract grayscale value: 
+    # 75% dark add to black family
+    # TODO: A Peeling and A Cut Above
+    # Match against reference images 
+    @colorFamily

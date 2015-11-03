@@ -1,0 +1,13 @@
+getColorFamily: ->
+    
+    @getHsl()
+    console.log @rgb
+    # @colorFamily = util.getColorFamily @rgb[0], @rgb[1], @rgb[2]
+    # @colorFamilies = [util.getColorFamily(@rgb[0], @rgb[1], @rgb[2]),util.getColorFamilyHue(@hsl[0])]
+    @colorFamilyDeltas = util.getColorFamilyDeltas(@rgb[0], @rgb[1], @rgb[2])
+    # @colorFamily = util.getColorFamilyHue( @hsl[0] )[0]
+    # TODO: extract grayscale value: 
+    # 75% dark add to black family
+    # TODO: A Peeling and A Cut Above
+    # Match against reference images 
+    @colorFamily

@@ -1,0 +1,97 @@
+  getColorFamilyDeltas: (r,g,b)->
+    console.log "getColorFamilyDeltas"
+    base_hues = [
+      ["#FF0000","Red",0],
+      ["#FF7F00","RedYellow",30],
+      ["#FFFF00","Yellow",60],
+      ["#7FFF00","Chartreuse",90],
+      ["#00FF00","Lime",120],
+      ["#00FF7F","SpringGreen",150],
+      ["#00FFFF","AquaCyan",180],
+      ["#007FFF","BlueGreen",210],
+      ["#0000FF","Blue",240],
+      ["#7F00FF","BluePurple",270],
+      ["#FF00FF","FuchiaMagenta",300],
+      ["#FF007F","Purple",330]
+      ["#ffffff", "White", ""],
+      ["#999999", "Gray", ""],
+      ["#000000", "Black", ""]
+    ]
+    console.log @
+    hex = @rgbToHex(r,g,b)
+    differenceArray = []
+
+    differenceArray.push [name,@hexDiff(hex,thisHex)] for [thisHex,name,base_hue] in base_hues
+    console.log differenceArray
+
+    #Function to find the smallest value in an array
+    Array.min = (array) ->
+      Math.min.apply Math, array
+    lowest = Array.min(differenceArray)
+    #Get the index for that lowest number
+    index = differenceArray.indexOf(lowest)
+    #Return the RGB name code
+    [base_hues[index][0],base_hues[index][1]]
+  getColorFamilyHue: (hue)->
+    hue = hue * 360
+    base_hues = [
+      ["#FF0000","Red",0],
+      ["#FF7F00","RedYellow",30],
+      ["#FFFF00","Yellow",60],
+      ["#7FFF00","Chartreuse",90],
+      ["#00FF00","Lime",120],
+      ["#00FF7F","SpringGreen",150],
+      ["#00FFFF","AquaCyan",180],
+      ["#007FFF","BlueGreen",210],
+      ["#0000FF","Blue",240],
+      ["#7F00FF","BluePurple",270],
+      ["#FF00FF","FuchiaMagenta",300],
+      ["#FF007F","Purple",330]
+    ]
+    differenceArray = []
+
+    #Function to find the smallest value in an array
+    Array.min = (array) ->
+      Math.min.apply Math, array
+
+    #Convert the HEX color in the array to RGB colors, split them up to R-G-B, then find out the difference between the "color" and the colors in the array
+    differenceArray.push Math.sqrt( (hue - base_hue) * (hue - base_hue) ) for [hex,name,base_hue] in base_hues
+    
+    #Get the lowest number from the differenceArray
+    lowest = Array.min(differenceArray)
+    #Get the index for that lowest number
+    index = differenceArray.indexOf(lowest)
+    #Return the RGB name code
+    [base_hues[index][0],base_hues[index][1]]
+  getColorFamily: (color_r,color_g,color_b) ->
+    console.log color_r,color_g,color_b
+    # TODO: consider storing this centrally so is globally modifiable
+    base_colors = [
+      [64, 224, 208,"Turquoise"],
+      [245, 245, 220,"Beige"],
+      [0, 0, 0,"Black"],
+      [0, 0, 255,"Blue"],
+      [150, 75, 0,"Brown"],
+      [144, 0, 32,"Burgandy"],
+      [0, 255, 0,"Green"],
+      [128, 128, 128,"Grey"],
+      [255, 127, 0,"Orange"],
+      [128, 0, 128,"Purple"]
+    ]
+    
+    #Create an empty array for the difference betwwen the colors
+    differenceArray = []
+
+    #Function to find the smallest value in an array
+    Array.min = (array) ->
+      Math.min.apply Math, array
+
+    #Convert the HEX color in the array to RGB colors, split them up to R-G-B, then find out the difference between the "color" and the colors in the array
+    differenceArray.push Math.sqrt((color_r - base_colors_r) * (color_r - base_colors_r) + (color_g - base_colors_g) * (color_g - base_colors_g) + (color_b - base_colors_b) * (color_b - base_colors_b)) for [base_colors_r,base_colors_g,base_colors_b,name] in base_colors
+      
+    #Get the lowest number from the differenceArray
+    lowest = Array.min(differenceArray)
+    #Get the index for that lowest number
+    index = differenceArray.indexOf(lowest)
+    #Return the RGB name code
+    base_colors[index][3]
